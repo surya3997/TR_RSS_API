@@ -25,10 +25,17 @@ for nm in nms:
     nm = BeautifulSoup(nm,'lxml')
     name = nm.text.split(' - [')[0]
     links = {}
-    for qual in nm.find_all('a'):
-        qual_link = qual.attrs['href']
-        qual_name = qual.text
-        links[qual_name] = qual_link
+    for post in nm.find_all('a'):
+        post_name = post.text
+        post_url = post.attrs['href']
+        try:
+            post_html=urlopen(post_url)
+            post_soup=BeautifulSoup(post_html,'lxml')
+            mag_tag = post_soup.find('a',attrs={'href':re.compile('magnet')})
+            mag_link = mag_tag.attrs['href']
+        except:
+            mag_link = None
+        links[post_name] = mag_link
         
     movie_list[name]=links
     
