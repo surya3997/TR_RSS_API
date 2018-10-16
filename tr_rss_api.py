@@ -8,7 +8,12 @@ Created on Sun Oct  7 12:40:50 2018
 
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
+from threading import Thread
+from queue import Queue
 import re
+import sys
+
+
 url = "http://tamilrockers.hn"
 html = urlopen(url)
 soup = BeautifulSoup(html, "lxml")
@@ -28,14 +33,35 @@ for nm in nms:
     for post in nm.find_all('a'):
         post_name = post.text
         post_url = post.attrs['href']
-        try:
-            post_html=urlopen(post_url)
-            post_soup=BeautifulSoup(post_html,'lxml')
-            mag_tag = post_soup.find('a',attrs={'href':re.compile('magnet')})
-            mag_link = mag_tag.attrs['href']
-        except:
-            mag_link = None
-        links[post_name] = mag_link
+        links[post_name] = post_url
         
     movie_list[name]=links
     
+def doWork():
+    while True:
+        post, url = q.get()
+        mag_link = getmaglink(url)
+        movie_list[name]=(url,mag_link)
+        q.task_done()
+
+def getmaglink(url):
+    try:
+        post_soup=BeautifulSoup(urlopen(url),'lxml')
+        return post_soup.find('a',attrbs={'href':re.compile('magent')})
+    except:
+        return None
+
+concurrent = len(movie_list)*5
+q = Queue(concurrent)
+for i in range(concurrent):
+    t = Thread(target=doWork)
+    t.daemon = True
+    t.start()
+
+for movie in movie_list:
+    try:
+        for post_url in movie_list.items():
+            q.put((movie, post_url))
+        q.join()
+    except KeyboardInterrupt:
+        sys.exit()
